@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tourism Trends</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #e0f7ff;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+    }
+
+    /* Page Heading */
+    .page-header {
+      padding: 60px 20px 20px;
+    }
+
+    .page-header h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .page-header p {
+      font-size: 18px;
+      color: #666;
+    }
+
+    /* Cards */
+    #trend-choice .card {
+      cursor: pointer;
+      padding: 30px 25px;
+      border-radius: 14px;
+      color: white;
+      flex: 1;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      min-width: 280px;
+      max-width: 350px;
+    }
+
+    #trend-choice .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .green-card {
+  background: linear-gradient(135deg, #43A047, #66BB6A);
+  box-shadow: 0 8px 16px rgba(67, 160, 71, 0.3);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+.green-card:hover {
+  background: linear-gradient(135deg, #388E3C, #4CAF50);
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.4);
+}
+
+.blue-card {
+  background: linear-gradient(135deg, #1E88E5, #42A5F5);
+  box-shadow: 0 8px 16px rgba(30, 136, 229, 0.3);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+.blue-card:hover {
+  background: linear-gradient(135deg, #1565C0, #2196F3);
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.4);
+}
+
+
+    #trend-choice > div {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      margin: 40px 20px 60px;
+      flex-wrap: wrap;
+    }
+
+    /* Forms */
+    form {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    select, .form-control, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      background-color: #009688;
+      color: white;
+      border: none;
+      transition: background 0.3s ease;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00796b;
+    }
+
+    /* Charts */
+    .chart-container {
+      max-width: 1000px;
+      height: 400px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 10px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    @media screen and (max-width: 768px) {
+      #trend-choice > div {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #trend-choice .card {
+        width: 90%;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Page Heading -->
+<div class="page-header">
+  <h1>📊 Tourist Trend Analysis</h1>
+</div>
+
+<!-- Card Choices -->
+<div id="trend-choice">
+  <div>
+    <div onclick="showForm('single')" class="card green-card" role="button" tabindex="0">
+      <h3>📈 <strong>Country Trend</strong></h3>
+      <p>View trend of a single country over the years.</p>
+    </div>
+
+    <div onclick="showForm('compare')" class="card blue-card" role="button" tabindex="0">
+      <h3>🔀 <strong>Compare Two Countries</strong></h3>
+      <p>Compare tourist trends between two countries.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Country Trend Form -->
+<div id="single-form" style="display:none;">
+  <h2>Tourist Arrival Trend (2017–2025)</h2>
+  <form method="POST">
+    <label for="country">Select Country:</label>
+    <select name="country" class="form-control" required>
+      {% for country in countries %}
+        <option value="{{ country }}" {% if selected_country == country %}selected{% endif %}>{{ country }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Show Trend</button>
+  </form>
+
+  {% if prediction %}
+    <h3>Trend for {{ prediction.country }}</h3>
+    <div class="chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <script>
+      const trendCtx = document.getElementById('trendChart').getContext('2d');
+      const trendYears = {{ prediction["years"] | tojson }};
+      const trendValues = {{ prediction["values"] | tojson }};
+
+      new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: trendYears,
+          datasets: [{
+            label: 'Tourist Arrivals',
+            data: trendValues,
+            borderColor: 'rgba(0, 150, 136, 1)',
+            backgroundColor: 'rgba(0, 150, 136, 0.2)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#004d40',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#004d40',
+                font: { weight: 'bold' }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1000 },
+              grid: { color: '#e0f2f1' }
+            },
+            x: {
+              grid: { color: '#e0f2f1' }
+            }
+          }
+        }
+      });
+    </script>
+  {% endif %}
+</div>
+
+<!-- Compare Countries Form -->
+<div id="compare-form" style="display:none;">
+  <h2>Compare Two Countries</h2>
+  <form method="POST">
+    <label for="compare1">Select First Country:</label>
+    <select name="compare1" required>
+      {% for country in countries %}
+        <option value="{{ country }}" {% if selected_compare[0] == country %}selected{% endif %}>{{ country }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="compare2">Select Second Country:</label>
+    <select name="compare2" required>
+      {% for country in countries %}
+        <option value="{{ country }}" {% if selected_compare[1] == country %}selected{% endif %}>{{ country }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">Compare Trends</button>
+  </form>
+
+  {% if compare_predictions %}
+    <h3>Comparison: {{ compare_predictions[0].country }} vs {{ compare_predictions[1].country }}</h3>
+    <div class="chart-container">
+      <canvas id="compareChart"></canvas>
+    </div>
+    <script>
+      const compareCtx = document.getElementById('compareChart').getContext('2d');
+      const compareData = {
+        labels: {{ compare_predictions[0].years | tojson }},
+        datasets: [
+          {
+            label: '{{ compare_predictions[0].country }}',
+            data: {{ compare_predictions[0]["values"] | tojson }},
+            borderColor: 'rgba(255, 87, 34, 1)',
+            backgroundColor: 'rgba(255, 87, 34, 0.2)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4
+          },
+          {
+            label: '{{ compare_predictions[1].country }}',
+            data: {{ compare_predictions[1]["values"] | tojson }},
+            borderColor: 'rgba(33, 150, 243, 1)',
+            backgroundColor: 'rgba(33, 150, 243, 0.2)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4
+          }
+        ]
+      };
+
+      new Chart(compareCtx, {
+        type: 'line',
+        data: compareData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                font: { weight: 'bold' }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: '#e0f2f1' }
+            },
+            x: {
+              grid: { color: '#e0f2f1' }
+            }
+          }
+        }
+      });
+    </script>
+  {% endif %}
+</div>
+
+<!-- JS Logic -->
+<script>
+  function showForm(type) {
+    document.getElementById("trend-choice").style.display = "none";
+    document.getElementById("single-form").style.display = (type === "single") ? "block" : "none";
+    document.getElementById("compare-form").style.display = (type === "compare") ? "block" : "none";
+  }
+
+  window.onload = function () {
+    {% if prediction %}
+      showForm('single');
+    {% elif compare_predictions %}
+      showForm('compare');
+    {% endif %}
+  };
+</script>
+
+</body>
+</html>
